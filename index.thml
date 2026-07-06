@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ラソラ駐車計算</title>
+    <style>
+        body { font-family: sans-serif; background: #f2f2f7; padding: 20px; display: flex; justify-content: center; }
+        .container { background: #fff; max-width: 400px; width: 100%; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.2rem; text-align: center; margin: 0 0 15px 0; }
+        input[type="time"] { width: 100%; padding: 12px; font-size: 1.2rem; border: 1px solid #c7c7cc; border-radius: 8px; box-sizing: border-box; text-align: center; }
+        .toggle { display: flex; margin-top: 12px; border: 1px solid #c7c7cc; border-radius: 8px; overflow: hidden; }
+        .toggle button { flex: 1; padding: 10px; border: none; background: #fff; font-size: 0.95rem; cursor: pointer; color: #333; }
+        .toggle button.active { background: #007aff; color: #fff; font-weight: bold; }
+        .note { font-size: 0.75rem; color: #8e8e93; text-align: center; margin-top: 6px; }
+        .result { margin-top: 20px; }
+        .zone { padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem; font-weight: bold; }
+        .free { background: #e4f9e2; color: #34c759; border-left: 4px solid #34c759; }
+        .max { background: #fff2e6; color: #ff9500; border-left: 4px solid #ff9500; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 15px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e5ea; }
+        th { background: #f2f2f7; color: #8e8e93; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🚗 ラソラ札幌 駐車料金計算</h1>
+    <input type="time" id="inputTime" onchange="calc()">
+    <div class="toggle">
+        <button id="btnNoShop" onclick="setShop(false)">買い物なし</button>
+        <button id="btnShop" onclick="setShop(true)">買い物1,000円以上</button>
+    </div>
+    <div class="note">※買い物1,000円以上（税込）で3時間無料になります</div>
+    <div class="result" id="res" style="display:none;">
+        <div class="zone free" id="fTxt"></div>
+        <div class="zone max" id="mTxt"></div>
+        <table>
+            <thead><tr><th>出庫時間枠</th><th>料金</th></tr></thead>
+            <tbody id="tBody"></tbody>
+        </table>
+    </div>
+</div>
+<script>
+    let hasShop = false;
+
+    window.onload = function() {
+        const n = new Date();
+        document.getElementById('inputTime').value = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+        setShop(false);
+    };
+
+    function fmt(d) { return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+    function setShop(val) {
+        hasShop = val;
+        document.getElementById('btnShop').classList.toggle('active', val);
+        document.getElementById('btnNoShop').classList.toggle('active', !val);
+        calc();
+    }
+
+    function calc() {
+        const v = document.getElementById('inputTime').value; if(!v) return;
+        const [h, m] = v.split(':');
+        const inT = new Date();
+        inT.setHours(parseInt(h), parseInt(m), 0, 0);
+
+        // 無料枠：買い物あり=180分（3時間）、なし=60分（1時間）
+        const freeMinutes = hasShop ? 180 : 60;
+        const fL = new Date(inT.getTime() + freeMinutes * 60000);
+
+        // 最大料金1,000円に達する時刻（無料枠終了 + 20分ごと100円 × 9回 = 180分後）
+        const mL = new Date(fL.getTime() + 180 * 60000);
+
+        document.getElementById('fTxt').innerHTML = `無料枠：${v} 〜 ${fmt(fL)} (0円)${hasShop ? '　※買い物1,000円以上時' : ''}`;
+        document.getElementById('mTxt').innerHTML = `最大料金：${fmt(mL)} 以降 (1,000円)`;
+
+        let b = document.getElementById('tBody');
+        b.innerHTML = `<tr><td style="color:#34c759;font-weight:bold;">${v} 〜 ${fmt(fL)}</td><td style="color:#34c759;font-weight:bold;">0円</td></tr>`;
+
+        let s = new Date(fL.getTime()), fee = 100;
+        while (fee <= 1000) {
+            let e = new Date(s.getTime() + 20 * 60000);
+            let tStr, fStr;
+            if (fee === 1000) {
+                tStr = `${fmt(s)} 〜 当日中`;
+                fStr = '1,000円(最大)';
+            } else {
+                tStr = `${fmt(s)} 〜 ${fmt(e)}`;
+                fStr = `${fee}円`;
+            }
+            b.insertAdjacentHTML('beforeend', `<tr><td>${tStr}</td><td>${fStr}</td></tr>`);
+            s = e;
+            fee += 100;
+        }
+        document.getElementById('res').style.display = 'block';
+    }
+</script>
+</body>
+</html>
