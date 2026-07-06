@@ -46,7 +46,7 @@
     window.onload = function() {
         const n = new Date();
         document.getElementById('inputTime').value = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
-        setShop(false);
+        setShop(true);
     };
 
     function fmt(d) { return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
